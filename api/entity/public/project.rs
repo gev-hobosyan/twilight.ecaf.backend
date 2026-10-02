@@ -5,6 +5,7 @@ use serde::Serialize;
 
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, Serialize)]
 #[sea_orm(table_name = "project")]
+#[serde(rename_all="camelCase")]
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
@@ -15,6 +16,7 @@ pub struct Model {
     #[sea_orm(column_type = "Text")]
     pub story: String,
     #[sea_orm(column_name = "use_AI")]
+    #[serde(rename="useAI")]
     pub use_ai: bool,
     #[sea_orm(column_type = "Text")]
     pub tech_stack: String,

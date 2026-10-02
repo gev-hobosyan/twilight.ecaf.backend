@@ -9,4 +9,3 @@ pub use super::project_config::Entity as ProjectConfig;
 pub use super::session::Entity as Session;
 pub use super::user::Entity as User;
 pub use super::verification::Entity as Verification;
-pub use super::project::Model as Project;
