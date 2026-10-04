@@ -6,8 +6,8 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use sea_orm::prelude::Uuid;
 use sea_orm::{ActiveModelTrait, EntityTrait, ModelTrait, Set};
-use serde::Deserialize;
-use crate::api::APIError;
+use serde::{Deserialize, Serialize};
+use crate::api::{APIError, APIResponse};
 use crate::app_state::AppState;
 use crate::entity::public::prelude::Project;
 use crate::entity::public::project;
@@ -72,55 +72,10 @@ impl ProjectBodyOpt {
     }
 }
 
-enum ProjectAPIResponse {
-    OK,
-    Created(Project),
-    Patched(Project),
-    Json(Project),
-    Error(StatusCode, APIError)
-}
-
-impl IntoResponse for ProjectAPIResponse {
-    fn into_response(self) -> Response {
-        match self {
-            ProjectAPIResponse::Created(project) => {
-                (
-                    StatusCode::CREATED,
-                    Json(project)
-                ).into_response()
-            }
-
-            ProjectAPIResponse::Patched(project) => {
-                (
-                    StatusCode::OK,
-                    Json(project)
-                ).into_response()
-            }
-
-            ProjectAPIResponse::Json(project) => {
-                (
-                    StatusCode::OK,
-                    Json(project)
-                ).into_response()
-            }
-
-            ProjectAPIResponse::Error(code, err) => {
-                (
-                    code,
-                    Json(err)
-                ).into_response()
-            }
-            ProjectAPIResponse::OK => {
-                StatusCode::OK.into_response()
-            }
-        }
-    }
-}
-
 async fn create_project(
     State(state): State<Arc<AppState>>,
     Json(body): Json<ProjectBody>
-) -> ProjectAPIResponse {
+) -> APIResponse<Project> {
     let project = project::ActiveModel {
         id: Default::default(),
         name: Set(body.name),
@@ -136,10 +91,10 @@ async fn create_project(
 
     match result {
         Ok(project) => {
-            ProjectAPIResponse::Created(project)
+            APIResponse::Created(project)
         }
         Err(_) => {
-            ProjectAPIResponse::Error(
+            APIResponse::Error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Connection failed".into()
             )
@@ -150,25 +105,25 @@ async fn create_project(
 async fn get_project(
     State(state): State<Arc<AppState>>,
     Path(id): Path<i32>
-) -> ProjectAPIResponse {
+) -> APIResponse<Project> {
     let project = project::Entity::find_by_id(id).one(&state.db).await;
 
     match project {
         Ok(res) => {
             match res {
                 None => {
-                    ProjectAPIResponse::Error(
+                    APIResponse::Error(
                         StatusCode::NOT_FOUND,
                         "Project not found".into()
                     )
                 }
                 Some(project) => {
-                    ProjectAPIResponse::Json(project)
+                    APIResponse::Json(project)
                 }
             }
         }
         Err(err) => {
-            ProjectAPIResponse::Error(
+            APIResponse::Error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Connection failed".into()
             )
@@ -180,14 +135,14 @@ async fn update_project(
     State(state): State<Arc<AppState>>,
     Path(id): Path<i32>,
     Json(body): Json<ProjectBodyOpt>,
-) -> ProjectAPIResponse {
+) -> APIResponse<Project> {
     let result = crate::entity::public::project::Entity::find_by_id(id).one(&state.db).await;
 
     match result {
         Ok(project) => {
             match project {
                 None => {
-                    ProjectAPIResponse::Error(
+                    APIResponse::Error(
                         StatusCode::NOT_FOUND,
                         "Project not found".into()
                     )
@@ -199,10 +154,10 @@ async fn update_project(
 
                     match project {
                         Ok(project) => {
-                            ProjectAPIResponse::Json(project)
+                            APIResponse::Patched(project)
                         }
                         Err(_) => {
-                            ProjectAPIResponse::Error(
+                            APIResponse::Error(
                                 StatusCode::INTERNAL_SERVER_ERROR,
                                 "Connection failed".into()
                             )
@@ -212,7 +167,7 @@ async fn update_project(
             }
         }
         Err(_) => {
-            ProjectAPIResponse::Error(
+            APIResponse::Error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Connection failed".into()
             )
@@ -223,14 +178,14 @@ async fn update_project(
 async fn delete_project(
     State(state): State<Arc<AppState>>,
     Path(id): Path<i32>
-) -> ProjectAPIResponse{
+) -> APIResponse<Project> {
     let project = project::Entity::find_by_id(id).one(&state.db).await;
 
     match project {
         Ok(project) => {
             match project {
                 None => {
-                    ProjectAPIResponse::Error(
+                    APIResponse::Error(
                         StatusCode::NOT_FOUND,
                         "Project not found".into()
                     )
@@ -238,12 +193,12 @@ async fn delete_project(
                 Some(project) => {
                     let res = project.delete(&state.db).await;
 
-                    ProjectAPIResponse::OK
+                    APIResponse::OK
                 }
             }
         }
         Err(_) => {
-            ProjectAPIResponse::Error(
+            APIResponse::Error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Connection failed".into()
             )

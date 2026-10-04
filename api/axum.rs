@@ -2,6 +2,7 @@ mod entity;
 mod app_state;
 mod project_routes;
 mod api;
+mod team_routes;
 
 use std::env;
 use std::sync::Arc;
@@ -15,6 +16,7 @@ use crate::app_state::AppState;
 use dotenvy::dotenv;
 use serde::{Deserialize, Serialize};
 use crate::project_routes::project_routes;
+use crate::team_routes::team_routes;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -26,6 +28,7 @@ async fn main() -> Result<(), Error> {
 
     let router = Router::new()
         .merge(project_routes())
+        .merge(team_routes())
         .with_state(state);
 
     let app = ServiceBuilder::new()

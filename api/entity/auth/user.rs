@@ -39,7 +39,7 @@ pub enum Relation {
     #[sea_orm(has_many = "super::member::Entity")]
     Member,
     #[sea_orm(has_many = "super::session::Entity")]
-    Session,
+    Session
 }
 
 impl Related<super::account::Entity> for Entity {
