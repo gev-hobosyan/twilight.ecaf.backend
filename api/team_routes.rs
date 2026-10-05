@@ -116,7 +116,7 @@ async fn create_team(
 
                             user.team = Set(Option::from(team.id));
 
-                            user.update(&state.db).await;
+                            let _ = user.update(&state.db).await;
                         }
                     }
                     Err(_) => {
