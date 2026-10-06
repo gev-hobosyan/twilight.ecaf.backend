@@ -39,7 +39,7 @@ impl TeamBodyOpt {
 struct TeamResponse {
     id: i32,
     name: String,
-    members: Vec<Uuid>
+    members: Vec<user::Model>
 }
 
 async fn get_team(
@@ -58,11 +58,8 @@ async fn get_team(
                     )
                 }
                 Some(team) => {
-                    let members: Vec<Uuid> = User::find()
+                    let members: Vec<user::Model> = User::find()
                         .filter(user::Column::Team.eq(team.id))
-                        .select_only()
-                        .column(user::Column::Id)
-                        .into_tuple()
                         .all(&state.db)
                         .await
                         .unwrap_or(vec![]);
@@ -181,8 +178,88 @@ async fn update_team(
     }
 }
 
+async fn get_team_of_user(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<Uuid>,
+) -> APIResponse<TeamResponse> {
+    let user_team: Result<Option<Option<i32>>, DbErr> = User::find_by_id(id)
+        .select_only()
+        .column(user::Column::Team)
+        .into_tuple()
+        .one(&state.db)
+        .await;
+
+    match user_team {
+        Ok(team_id_opt) => {
+            match team_id_opt {
+                None => {
+                    APIResponse::Error(
+                        StatusCode::NO_CONTENT,
+                        "User without team".into()
+                    )
+                }
+                Some(team_id) => {
+                    match team_id {
+                        None => {
+                            APIResponse::Error(
+                                StatusCode::NOT_FOUND,
+                                "Team not found".into()
+                            )
+                        }
+                        Some(team_id) => {
+                            let team = TeamEntity::find_by_id(team_id).one(&state.db).await;
+
+                            match team {
+                                Ok(team) => {
+                                    match team {
+                                        None => {
+                                            APIResponse::Error(
+                                                StatusCode::NOT_FOUND,
+                                                "Team not found".into()
+                                            )
+                                        }
+                                        Some(team) => {
+                                            let members: Vec<user::Model> = User::find()
+                                                .filter(user::Column::Team.eq(team.id))
+                                                .all(&state.db)
+                                                .await
+                                                .unwrap_or(vec![]);
+
+                                            APIResponse::Json(TeamResponse {
+                                                id: team.id,
+                                                name: team.name.unwrap(),
+                                                members
+                                            })
+                                        }
+                                    }
+                                }
+                                Err(_) => {
+                                    APIResponse::Error(
+                                        StatusCode::INTERNAL_SERVER_ERROR,
+                                        "Connection failed".into()
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Err(err) => {
+            println!("{err:?}");
+
+            APIResponse::Error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Connection failed".into()
+            )
+        }
+    }
+}
+
+
 pub fn team_routes() -> Router<Arc<AppState>> {
     Router::new()
         .route("/team", post(create_team))
         .route("/team/{id}", get(get_team).patch(update_team))
+        .route("/team/user/{id}", get(get_team_of_user))
 }
