@@ -14,6 +14,7 @@ pub struct Model {
     pub created_at: DateTimeWithTimeZone,
     #[sea_orm(column_type = "Text", nullable)]
     pub telegram: Option<String>,
+    pub resolved: bool
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

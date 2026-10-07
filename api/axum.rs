@@ -4,6 +4,7 @@ mod project_routes;
 mod api;
 mod team_routes;
 mod support_routes;
+mod bot;
 
 use std::sync::Arc;
 use axum::response::{IntoResponse};
@@ -17,7 +18,14 @@ use vercel_runtime::Error;
 use crate::app_state::AppState;
 use dotenvy::dotenv;
 use serde::{Deserialize, Serialize};
+use teloxide::{respond, Bot, dptree, RequestError};
+use teloxide::dptree::Handler;
+use teloxide::prelude::Requester;
+use teloxide::repls::CommandReplExt;
+use teloxide::requests::ResponseResult;
+use teloxide::types::Message;
 use tower_http::cors::CorsLayer;
+use crate::bot::{answer, Command};
 use crate::project_routes::project_routes;
 use crate::support_routes::support_routes;
 use crate::team_routes::team_routes;
@@ -27,6 +35,17 @@ async fn main() -> Result<(), Error> {
     dotenv().expect(".env file not found");
 
     let state = Arc::new(AppState::new().await?);
+
+    let bot = state.bot.clone();
+    let db = state.db.clone();
+
+    tokio::spawn(async move {
+        Command::repl(
+            bot,
+            move |bot, msg, cmd| answer(bot, msg, cmd, db.clone())
+        ).await;
+        }
+    );
 
     let cors = CorsLayer::new()
         .allow_origin("http://localhost:3000".parse::<axum::http::HeaderValue>()?)

@@ -48,7 +48,8 @@ async fn create_support_request(
                         user: Set(body.user),
                         message: Set(body.message),
                         telegram: Set(body.telegram),
-                        created_at: Default::default()
+                        created_at: Default::default(),
+                        resolved: Default::default(),
                     };
 
                     let ticket = ticket.insert(&state.db).await;
