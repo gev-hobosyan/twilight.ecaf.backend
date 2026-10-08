@@ -59,9 +59,10 @@ async fn main() -> Result<(), Error> {
         .layer(cors)
         .with_state(state);
 
-    let app = ServiceBuilder::new()
-        .layer(VercelLayer::new())
-        .service(router);
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
+        .await?;
 
-    vercel_runtime::run(app).await
+    axum::serve(listener, router).await?;
+
+    Ok(())
 }
