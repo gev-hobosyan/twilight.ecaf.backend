@@ -27,8 +27,8 @@ use crate::team_routes::team_routes;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    dotenv().expect(".env file not found");
-    
+    // dotenv().expect(".env file not found");
+
     let state = Arc::new(AppState::new().await?);
 
     let bot = state.bot.clone();
@@ -53,9 +53,9 @@ async fn main() -> Result<(), Error> {
         .merge(support_routes())
         .layer(cors)
         .with_state(state);
-    
+
     let PORT = env::var("PORT").unwrap_or("3000".into());
-    
+
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{PORT}"))
         .await?;
 
