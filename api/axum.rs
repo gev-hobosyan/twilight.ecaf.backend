@@ -6,24 +6,19 @@ mod team_routes;
 mod support_routes;
 mod bot;
 
+use std::env;
 use std::sync::Arc;
 use axum::response::{IntoResponse};
 use axum::Router;
 use axum::http::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE};
 use axum::http::Method;
 use sea_orm::{ActiveModelTrait, ColIdx, EntityTrait, Iden, ModelTrait};
-use tower::ServiceBuilder;
-use vercel_runtime::axum::VercelLayer;
 use vercel_runtime::Error;
 use crate::app_state::AppState;
 use dotenvy::dotenv;
 use serde::{Deserialize, Serialize};
-use teloxide::{respond, Bot, dptree, RequestError};
-use teloxide::dptree::Handler;
 use teloxide::prelude::Requester;
 use teloxide::repls::CommandReplExt;
-use teloxide::requests::ResponseResult;
-use teloxide::types::Message;
 use tower_http::cors::CorsLayer;
 use crate::bot::{answer, Command};
 use crate::project_routes::project_routes;
@@ -32,8 +27,8 @@ use crate::team_routes::team_routes;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    // dotenv().expect(".env file not found");
-
+    dotenv().expect(".env file not found");
+    
     let state = Arc::new(AppState::new().await?);
 
     let bot = state.bot.clone();
@@ -58,8 +53,10 @@ async fn main() -> Result<(), Error> {
         .merge(support_routes())
         .layer(cors)
         .with_state(state);
-
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
+    
+    let PORT = env::var("PORT").unwrap_or("3000".into());
+    
+    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{PORT}"))
         .await?;
 
     axum::serve(listener, router).await?;
