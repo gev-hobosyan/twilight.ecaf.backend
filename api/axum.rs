@@ -5,6 +5,7 @@ mod api;
 mod team_routes;
 mod support_routes;
 mod bot;
+mod admin_routes;
 
 use std::env;
 use std::sync::Arc;
@@ -25,6 +26,7 @@ use serde::{Deserialize, Serialize};
 use teloxide::prelude::Requester;
 use teloxide::repls::CommandReplExt;
 use tower_http::cors::CorsLayer;
+use crate::admin_routes::admin_routes;
 use crate::bot::{answer, Command};
 use crate::project_routes::project_routes;
 use crate::support_routes::support_routes;
@@ -93,6 +95,7 @@ async fn main() -> Result<(), Error> {
         .merge(project_routes())
         .merge(team_routes())
         .merge(support_routes())
+        .merge(admin_routes())
         .route("/pdf", get(test_pdf))
         .layer(cors)
         .with_state(state);
