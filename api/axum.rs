@@ -6,6 +6,7 @@ mod team_routes;
 mod support_routes;
 mod bot;
 mod admin_routes;
+mod pdf_utils;
 
 use std::env;
 use std::sync::Arc;

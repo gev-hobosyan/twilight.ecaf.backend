@@ -17,6 +17,7 @@ dotenvy = "0.15.7"
 tower-http = { version = "0.7.1", features = ["cors"] }
 teloxide = { version =  "0.17", features = ["macros"] }
 genpdf = "0.2.0"
+krilla = "0.8.2"
 
 # You can specify a library for shared logic here (optional)
 # [lib]

@@ -1,18 +1,40 @@
 use std::env;
+use std::path::PathBuf;
 use std::sync::Arc;
+use axum::body::Bytes;
 use axum::extract::{Path, State};
-use axum::http::{HeaderMap, StatusCode};
+use axum::http::{header, HeaderMap, StatusCode};
+use axum::response::IntoResponse;
 use axum::Router;
 use axum::routing::get;
-use sea_orm::{ColumnTrait, DbErr, EntityTrait, QueryFilter};
+use krilla::color::rgb::Color;
+use krilla::Document;
+use krilla::geom::{PathBuilder, Point};
+use krilla::num::NormalizedF32;
+use krilla::page::PageSettings;
+use krilla::paint::{Fill, FillRule, Paint};
+use krilla::text::{Font, TextDirection};
+use sea_orm::{ColumnTrait, EntityTrait, Iden, QueryFilter};
 use sea_orm::prelude::Uuid;
 use crate::api::APIResponse;
 use crate::app_state::AppState;
 use crate::entity::auth::prelude::User;
 use crate::entity::auth::user;
-use crate::entity::auth::user::Model;
 use crate::entity::public::prelude::{Project, Team};
 use crate::entity::public::{project, team};
+use crate::pdf_utils::{draw_title, draw_table, TableDrawable, text_size};
+
+struct UserTableElement {
+    name: String,
+    project: String,
+    team: String
+}
+
+impl TableDrawable for UserTableElement {
+    fn into_vec(self) -> Vec<String> {
+        vec![self.name, self.team, self.project]
+    }
+}
 
 fn check_api_key(headers: &HeaderMap, ) -> bool {
     let api_key = headers
@@ -146,10 +168,201 @@ async fn get_teams(
     APIResponse::Json(teams.unwrap())
 }
 
+#[axum::debug_handler]
+async fn get_pdf(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap
+) -> Result<impl IntoResponse, StatusCode> {
+    if check_api_key(&headers) == false {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    let users = User::find()
+        .filter(user::Column::Role.eq("user"))
+        .all(&state.db).await.unwrap_or(vec![]);
+
+    let projects = project::Entity::find()
+        .all(&state.db)
+        .await;
+
+    let teams = team::Entity::find()
+        .all(&state.db)
+        .await.unwrap_or(vec![]);
+
+    let mut data: Vec<UserTableElement> = vec![];
+
+    for user in users.clone() {
+        let project = user.project.unwrap_or(0);
+        let team = user.team.unwrap_or(0);
+
+        let mut user = UserTableElement {
+            name: user.name.clone(),
+            project: String::from("None"),
+            team: String::from("None")
+        };
+
+        if project > 0 {
+            let project = project::Entity::find_by_id(project)
+                .one(&state.db)
+                .await;
+
+            if let Ok(Some(project)) = project {
+                user.project = project.name;
+            }
+        }
+
+        if team > 0 {
+            let team = team::Entity::find_by_id(team)
+                .one(&state.db)
+                .await;
+
+            if let Ok(Some(team)) = team {
+                user.team = team.name.unwrap();
+            }
+        }
+
+        data.push(user);
+    }
+
+    let font = {
+        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("fonts/Roboto-Regular.ttf");
+        let data = std::fs::read(&path).unwrap();
+        Font::new(data.into(), 0).unwrap()
+    };
+
+    let mut document = Document::new();
+
+    let page_width = 210.0 * (72.0 / 25.4);
+    let page_height = 297.0 * (72.0 / 25.4);
+
+    let mut page = document.start_page_with(PageSettings::from_wh(page_width, page_height).unwrap());
+    let mut surface = page.surface();
+
+    let (_, title_y) = draw_title(&mut surface, page_width, page_height, "Participants", 20.0, font.clone());
+
+    draw_table(&mut surface, page_width, page_height, vec!["Name", "Team", "Project"], data, 16.0, font.clone(), title_y + 20.0);
+
+    surface.finish();
+    page.finish();
+
+    if let Ok(projects) = projects {
+        for project in projects {
+            let mut page = document.start_page_with(PageSettings::from_wh(page_width, page_height).unwrap());
+            let mut surface = page.surface();
+
+            let (_, title_y) = draw_title(&mut surface, page_width, page_height, project.name.as_str(), 20.0, font.clone());
+
+            let (owner, team_id): (String, i32) = match users.iter().find(|user| user.id == project.owner.unwrap_or(Uuid::new_v4())) {
+                Some(owner) => {
+                    (owner.name.clone(), owner.team.unwrap_or(0))
+                }
+                None => {
+                    ("None".to_string(), 0)
+                }
+            };
+
+            let team = match teams.iter().find(|team| team.id == team_id) {
+                Some(team) => {
+                    team.name.clone().unwrap_or("None".to_string()).clone()
+                }
+                None => {"None".to_string()}
+            };
+
+            let mut y = title_y + 50.0;
+
+            surface.draw_text(
+                Point::from_xy(20.0, y),
+                font.clone(),
+                18.0,
+                format!("Owner: {}", owner).as_str(),
+                false,
+                TextDirection::Auto
+            );
+
+            y += 25.0;
+
+            surface.draw_text(
+                Point::from_xy(20.0, y),
+                font.clone(),
+                18.0,
+                format!("Team: {}", team).as_str(),
+                false,
+                TextDirection::Auto
+            );
+
+            y += 25.0;
+
+            surface.draw_text(
+                Point::from_xy(20.0, y),
+                font.clone(),
+                18.0,
+                "Use AI:",
+                false,
+                TextDirection::Auto
+            );
+
+            let x = 30.0 + text_size(18.0, "Use AI:").0;
+
+            let paint = Paint::from(match project.use_ai {
+                true => {
+                    Color::new(0, 255, 0)
+                }
+                false => {
+                    Color::new(255, 0, 0)
+                }
+            });
+
+            let rect = {
+                let mut pb = PathBuilder::new();
+                pb.move_to(x, y - 80.0);
+                pb.line_to(x + 80.0, y - 80.0);
+                pb.line_to(x + 80.0, y);
+                pb.line_to(x, y);
+
+                pb.close();
+                pb.finish().unwrap()
+            };
+
+            surface.set_fill(
+                Some(
+                    Fill {
+                        paint,
+                        rule: FillRule::EvenOdd,
+                        opacity: NormalizedF32::ONE
+                    }
+                )
+            );
+
+            surface.draw_path(
+                &rect
+            );
+
+            surface.finish();
+            page.finish();
+        }
+    }
+
+    let pdf = document.finish().unwrap();
+
+    let mut headers = HeaderMap::new();
+
+    headers.insert(
+        header::CONTENT_TYPE, "application/pdf".parse().unwrap()
+    );
+
+    headers.insert(
+        header::CONTENT_DISPOSITION,
+        "inline; filename=\"admin.pdf\"".parse().unwrap()
+    );
+
+    Ok((headers, Bytes::from(pdf)))
+}
+
 pub fn admin_routes() -> Router<Arc<AppState>> {
     Router::new()
         .route("/admin/users", get(get_participants))
         .route("/admin/projects", get(get_projects))
         .route("/admin/user/{id}", get(get_user))
         .route("/admin/teams", get(get_teams))
+        .route("/admin/pdf", get(get_pdf))
 }
