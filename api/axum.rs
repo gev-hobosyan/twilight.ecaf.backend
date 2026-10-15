@@ -52,6 +52,7 @@ async fn main() -> Result<(), Error> {
 
     let cors = CorsLayer::new()
         .allow_origin("http://localhost:3000".parse::<axum::http::HeaderValue>()?)
+        .allow_origin("https://twilightecaf.vercel.app".parse::<axum::http::HeaderValue>()?)
         .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::DELETE])
         .allow_headers([AUTHORIZATION, ACCEPT, CONTENT_TYPE]);
 
