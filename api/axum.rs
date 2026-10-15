@@ -26,7 +26,7 @@ use hyper::{header, HeaderMap, StatusCode};
 use serde::{Deserialize, Serialize};
 use teloxide::prelude::Requester;
 use teloxide::repls::CommandReplExt;
-use tower_http::cors::CorsLayer;
+use tower_http::cors::{AllowOrigin, CorsLayer};
 use crate::admin_routes::admin_routes;
 use crate::bot::{answer, Command};
 use crate::project_routes::project_routes;
@@ -51,8 +51,10 @@ async fn main() -> Result<(), Error> {
     });
 
     let cors = CorsLayer::new()
-        .allow_origin("http://localhost:3000".parse::<axum::http::HeaderValue>()?)
-        .allow_origin("https://twilightecaf.vercel.app".parse::<axum::http::HeaderValue>()?)
+        .allow_origin(AllowOrigin::list([
+            "http://localhost:3000".parse::<axum::http::HeaderValue>()?,
+            "https://twilightecaf.vercel.app".parse::<axum::http::HeaderValue>()?
+        ]))
         .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::DELETE])
         .allow_headers([AUTHORIZATION, ACCEPT, CONTENT_TYPE]);
 
