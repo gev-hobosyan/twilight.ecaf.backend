@@ -8,6 +8,7 @@ use sea_orm::prelude::Uuid;
 use serde::{Deserialize, Serialize};
 use crate::api::APIResponse;
 use crate::app_state::AppState;
+use crate::bot::send_report;
 use crate::entity::auth::prelude::User;
 use crate::entity::auth::user;
 use crate::entity::public::prelude::{Team, TeamEntity};
@@ -72,7 +73,9 @@ async fn get_team(
                 }
             }
         }
-        Err(_) => {
+        Err(err) => {
+            send_report(&state.bot, state.chat_id, err.to_string()).await;
+            
             APIResponse::Error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Connection Failed".into()
@@ -127,7 +130,9 @@ async fn create_team(
 
             APIResponse::Json(team)
         }
-        Err(_) => {
+        Err(err) => {
+            send_report(&state.bot, state.chat_id, err.to_string()).await;
+            
             APIResponse::Error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Connection failed".into()
@@ -169,7 +174,9 @@ async fn update_team(
                 }
             }
         }
-        Err(_) => {
+        Err(err) => {
+            send_report(&state.bot, state.chat_id, err.to_string()).await;
+            
             APIResponse::Error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Connection Failed".into()
@@ -233,7 +240,9 @@ async fn get_team_of_user(
                                         }
                                     }
                                 }
-                                Err(_) => {
+                                Err(err) => {
+                                    send_report(&state.bot, state.chat_id, err.to_string()).await;
+                                    
                                     APIResponse::Error(
                                         StatusCode::INTERNAL_SERVER_ERROR,
                                         "Connection failed".into()
@@ -246,7 +255,7 @@ async fn get_team_of_user(
             }
         }
         Err(err) => {
-            println!("{err:?}");
+            send_report(&state.bot, state.chat_id, err.to_string()).await;
 
             APIResponse::Error(
                 StatusCode::INTERNAL_SERVER_ERROR,

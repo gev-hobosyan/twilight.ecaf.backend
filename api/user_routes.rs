@@ -6,6 +6,7 @@ use axum::routing::get;
 use sea_orm::{ColumnTrait, DbErr, EntityTrait, QueryFilter};
 use crate::api::APIResponse;
 use crate::app_state::AppState;
+use crate::bot::send_report;
 use crate::entity::auth::prelude::User;
 use crate::entity::auth::user;
 use crate::entity::auth::user::Model;
@@ -33,7 +34,9 @@ async fn get_user_by_name(
                 }
             }
         }
-        Err(_) => {
+        Err(err) => {
+            send_report(&state.bot, state.chat_id, err.to_string()).await;
+
             APIResponse::Error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Connection failed".into()

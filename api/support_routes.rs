@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use crate::api::APIResponse;
 use crate::app_state::AppState;
 use teloxide::prelude::*;
+use crate::bot::send_report;
 use crate::entity::auth::prelude::User;
 use crate::entity::public::ticket;
 
@@ -87,7 +88,9 @@ async fn create_support_request(
                                 Ok(_) => {
                                     APIResponse::OK
                                 }
-                                Err(_) => {
+                                Err(err) => {
+                                    send_report(&state.bot, state.chat_id, err.to_string()).await;
+                                    
                                     APIResponse::Error(
                                         Default::default(),
                                         "Message not sent".into()
@@ -96,7 +99,7 @@ async fn create_support_request(
                             }
                         }
                         Err(err) => {
-                            println!("{err:?}");
+                            send_report(&state.bot, state.chat_id, err.to_string()).await;
 
                             APIResponse::Error(
                                 StatusCode::INTERNAL_SERVER_ERROR,
@@ -107,7 +110,8 @@ async fn create_support_request(
                 }
             }
         }
-        Err(_) => {
+        Err(err) => {
+            send_report(&state.bot, state.chat_id, err.to_string()).await;
             APIResponse::Error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Connection failed".into()
@@ -158,7 +162,9 @@ async fn create_anonymous_support_request(
                     Ok(_) => {
                         APIResponse::OK
                     }
-                    Err(_) => {
+                    Err(err) => {
+                        send_report(&state.bot, state.chat_id, err.to_string()).await;
+                        
                         APIResponse::Error(
                             Default::default(),
                             "Message not sent".into()
@@ -167,7 +173,7 @@ async fn create_anonymous_support_request(
                 }
         }
         Err(err) => {
-            println!("{err:?}");
+            send_report(&state.bot, state.chat_id, err.to_string()).await;
 
             APIResponse::Error(
                 StatusCode::INTERNAL_SERVER_ERROR,

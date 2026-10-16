@@ -10,6 +10,7 @@ use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, ModelTrait, QuerySelect, Set
 use serde::{Deserialize};
 use crate::api::{APIResponse};
 use crate::app_state::AppState;
+use crate::bot::send_report;
 use crate::entity::auth::prelude::User;
 use crate::entity::auth::user;
 use crate::entity::public::prelude::Project;
@@ -138,7 +139,9 @@ async fn create_project(
 
             APIResponse::Created(project)
         }
-        Err(_) => {
+        Err(err) => {
+            send_report(&state.bot, state.chat_id, err.to_string()).await;
+
             APIResponse::Error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Connection failed".into()
@@ -168,6 +171,8 @@ async fn get_project(
             }
         }
         Err(err) => {
+            send_report(&state.bot, state.chat_id, err.to_string()).await;
+
             APIResponse::Error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Connection failed".into()
@@ -211,7 +216,9 @@ async fn update_project(
                 }
             }
         }
-        Err(_) => {
+        Err(err) => {
+            send_report(&state.bot, state.chat_id, err.to_string()).await;
+
             APIResponse::Error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Connection failed".into()
@@ -242,7 +249,9 @@ async fn delete_project(
                 }
             }
         }
-        Err(_) => {
+        Err(err) => {
+            send_report(&state.bot, state.chat_id, err.to_string()).await;
+            
             APIResponse::Error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Connection failed".into()

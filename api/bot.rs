@@ -95,3 +95,7 @@ pub async fn answer(bot: Bot, msg: Message, cmd: Command, db: DatabaseConnection
 
     Ok(())
 }
+
+pub async fn send_report(bot: &Bot, chat_id: ChatId, error: String) {
+    let _ = bot.send_message(chat_id, format!("En error has occurred:\n{}", error)).await;
+}
