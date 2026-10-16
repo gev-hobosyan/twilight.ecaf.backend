@@ -13,8 +13,9 @@ use crate::app_state::AppState;
 use crate::bot::send_report;
 use crate::entity::auth::prelude::User;
 use crate::entity::auth::user;
-use crate::entity::public::prelude::Project;
+use crate::entity::public::prelude::{Project, TeamEntity};
 use crate::entity::public::project;
+use crate::entity::public::project::Model;
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all="camelCase")]
@@ -251,7 +252,7 @@ async fn delete_project(
         }
         Err(err) => {
             send_report(&state.bot, state.chat_id, err.to_string()).await;
-            
+
             APIResponse::Error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Connection failed".into()
@@ -260,8 +261,101 @@ async fn delete_project(
     }
 }
 
+async fn get_project_of_user(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<Uuid>
+) -> APIResponse<Project> {
+    let project = project::Entity::find()
+        .filter(project::Column::Owner.eq(Some(id)))
+        .one(&state.db)
+        .await;
+
+    match project {
+        Ok(project) => {
+            match project {
+                Some(project) => {
+                    APIResponse::Json(project)
+                }
+                None => {
+                    let user = User::find_by_id(id)
+                        .one(&state.db)
+                        .await;
+
+                    match user {
+                        Ok(user) => {
+                            match user {
+                                Some(user) => {
+                                    match user.project {
+                                        Some(project_id) => {
+                                            let project = project::Entity::find_by_id(project_id)
+                                                .one(&state.db)
+                                                .await;
+
+                                            match project {
+                                                Ok(project) => {
+                                                    match project {
+                                                        Some(project) => {
+                                                            APIResponse::Json(project)
+                                                        }
+                                                        None => {
+                                                            APIResponse::Error(
+                                                                StatusCode::NOT_FOUND,
+                                                                "Project Not Found".into()
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                                Err(err) => {
+                                                    send_report(&state.bot, state.chat_id, err.to_string()).await;
+
+                                                    APIResponse::Error(
+                                                        StatusCode::INTERNAL_SERVER_ERROR,
+                                                        "Connection failed".into()
+                                                    )
+                                                }
+                                            }
+                                        }
+                                        None => {
+                                            APIResponse::Error(
+                                                StatusCode::NO_CONTENT,
+                                                "User without project".into()
+                                            )
+                                        }
+                                    }
+                                }
+                                None => {
+                                    APIResponse::Error(
+                                        StatusCode::NOT_FOUND,
+                                        "Project Not Found".into()
+                                    )
+                                }
+                            }
+                        }
+                        Err(err) => {
+                            send_report(&state.bot, state.chat_id, err.to_string()).await;
+
+                            APIResponse::Error(
+                                StatusCode::INTERNAL_SERVER_ERROR,
+                                "Connection failed".into()
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        Err(err) => {
+            send_report(&state.bot, state.chat_id, err.to_string()).await;
+
+            APIResponse::Error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Connection failed".into()
+            )
+        }
+    }
+}
 pub fn project_routes() -> Router<Arc<AppState>>{
     Router::new()
         .route("/project", post(create_project))
         .route("/project/{id}", get(get_project).patch(update_project).delete(delete_project))
+        .route("/project/user/{id}", get(get_project_of_user))
 }
