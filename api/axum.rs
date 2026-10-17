@@ -8,6 +8,7 @@ mod bot;
 mod admin_routes;
 mod pdf_utils;
 mod user_routes;
+mod progress_routes;
 
 use std::env;
 use std::sync::Arc;
@@ -29,6 +30,7 @@ use teloxide::repls::CommandReplExt;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use crate::admin_routes::admin_routes;
 use crate::bot::{answer, Command};
+use crate::progress_routes::progress_routes;
 use crate::project_routes::project_routes;
 use crate::support_routes::support_routes;
 use crate::team_routes::team_routes;
@@ -64,6 +66,7 @@ async fn main() -> Result<(), Error> {
         .merge(support_routes())
         .merge(admin_routes())
         .merge(user_routes())
+        .merge(progress_routes())
         .layer(cors)
         .with_state(state);
 

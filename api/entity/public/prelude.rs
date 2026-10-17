@@ -4,3 +4,4 @@ pub use super::ticket::Entity as Ticket;
 pub use super::project::Model as Project;
 pub use super::team::Model as Team;
 pub use super::team::Entity as TeamEntity;
+pub use super::progress::Entity as Progress;

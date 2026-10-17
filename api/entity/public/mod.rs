@@ -5,3 +5,5 @@ pub mod prelude;
 pub mod ticket;
 pub mod project;
 pub mod team;
+pub mod progress;
+
