@@ -38,7 +38,7 @@ use crate::user_routes::user_routes;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    // dotenv().expect(".env file not found");
+    dotenv().expect(".env file not found");
 
     let state = Arc::new(AppState::new().await?);
 
@@ -58,7 +58,7 @@ async fn main() -> Result<(), Error> {
             "https://twilightecaf.vercel.app".parse::<axum::http::HeaderValue>()?
         ]))
         .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::DELETE])
-        .allow_headers([AUTHORIZATION, ACCEPT, CONTENT_TYPE]);
+        .allow_headers([AUTHORIZATION, ACCEPT, CONTENT_TYPE, "x-api-key".parse::<axum::http::HeaderName>()?]);
 
     let router = Router::new()
         .merge(project_routes())

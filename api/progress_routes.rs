@@ -27,7 +27,7 @@ async fn get_progress(
 ) -> APIResponse<Vec<progress::Model>> {
     let progress = Progress::find()
         .filter(progress::Column::ProjectId.eq(id))
-        .order_by(progress::Column::Date, Order::Asc)
+        .order_by(progress::Column::Date, Order::Desc)
         .all(&state.db)
         .await;
 
@@ -49,7 +49,20 @@ async fn get_progress(
 async fn add_progress(
     State(state): State<Arc<AppState>>,
     Json(body): Json<ProgressBody>
-) -> APIResponse<progress::Model>{
+) -> APIResponse<Model>{
+    let progress = Progress::find()
+        .filter(progress::Column::Date.eq(body.date.clone()))
+        .one(&state.db)
+        .await;
+
+    if let Ok(Some(_)) = progress {
+        return APIResponse::Error(
+            StatusCode::BAD_REQUEST,
+            "Progress for today already registered".into()
+        )
+    }
+
+
     let progress = progress::ActiveModel {
         id: Default::default(),
         project_id: Set(body.project_id),
@@ -77,6 +90,6 @@ async fn add_progress(
 
 pub fn progress_routes() -> Router<Arc<AppState>> {
     Router::new()
-        .route("/progress/{id}", get(get_progress))
+        .route("/progress/project/{id}", get(get_progress))
         .route("/progress", post(add_progress))
 }

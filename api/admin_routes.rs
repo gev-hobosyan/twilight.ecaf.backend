@@ -1,4 +1,5 @@
 use std::env;
+use std::io::empty;
 use std::path::PathBuf;
 use std::sync::Arc;
 use axum::body::Bytes;
@@ -178,7 +179,8 @@ async fn get_pdf(
     }
 
     let users = User::find()
-        .filter(user::Column::Role.eq("user"))
+        // TODO: uncomment
+        // .filter(user::Column::Role.eq("user"))
         .all(&state.db).await.unwrap_or(vec![]);
 
     let projects = project::Entity::find()
@@ -305,7 +307,7 @@ async fn get_pdf(
 
             let paint = Paint::from(match project.use_ai {
                 true => {
-                    Color::new(0, 255, 0)
+                    Color::new(19, 143, 13)
                 }
                 false => {
                     Color::new(255, 0, 0)
@@ -314,10 +316,10 @@ async fn get_pdf(
 
             let rect = {
                 let mut pb = PathBuilder::new();
-                pb.move_to(x, y - 80.0);
-                pb.line_to(x + 80.0, y - 80.0);
-                pb.line_to(x + 80.0, y);
-                pb.line_to(x, y);
+                pb.move_to(x, y - 13.0);
+                pb.line_to(x + 15.0, y - 13.0);
+                pb.line_to(x + 15.0, y + 2.0);
+                pb.line_to(x, y + 2.0);
 
                 pb.close();
                 pb.finish().unwrap()
@@ -336,6 +338,154 @@ async fn get_pdf(
             surface.draw_path(
                 &rect
             );
+
+            surface.set_fill(None);
+
+            y += 25.0;
+
+            surface.draw_text(
+                Point::from_xy(20.0, y),
+                font.clone(),
+                18.0,
+                format!("Tech Stack: {}", project.tech_stack).as_str(),
+                false,
+                TextDirection::Auto
+            );
+
+            y += 25.0;
+
+            surface.draw_text(
+                Point::from_xy(20.0, y),
+                font.clone(),
+                18.0,
+                "Description:",
+                false,
+                TextDirection::Auto
+            );
+
+            y += 25.0;
+            let description: Vec<&str> = project.description.split("\n").filter(|text| !text.eq(&"")).collect();
+
+            if description.len() <= 20 {
+                for line in description {
+                    surface.draw_text(
+                        Point::from_xy(45.0, y),
+                        font.clone(),
+                        18.0,
+                        line,
+                        false,
+                        TextDirection::Auto
+                    );
+
+                    y += 25.0;
+                }
+            } else {
+                surface.draw_text(
+                    Point::from_xy(45.0, y),
+                    font.clone(),
+                    18.0,
+                    "Description too long",
+                    false,
+                    TextDirection::Auto
+                );
+
+                y += 25.0;
+            }
+
+
+            let story: Vec<&str> = project.story.split("\n").filter(|text| !text.eq(&"")).collect();
+
+            surface.draw_text(
+                Point::from_xy(20.0, y),
+                font.clone(),
+                18.0,
+                "Story:",
+                false,
+                TextDirection::Auto
+            );
+
+            y += 25.0;
+
+            if story.len() <= 20 {
+                for line in story {
+                    surface.draw_text(
+                        Point::from_xy(45.0, y),
+                        font.clone(),
+                        18.0,
+                        line,
+                        false,
+                        TextDirection::Auto
+                    );
+
+                    y += 25.0;
+                }
+            } else {
+                surface.draw_text(
+                    Point::from_xy(45.0, y),
+                    font.clone(),
+                    18.0,
+                    "Story too long",
+                    false,
+                    TextDirection::Auto
+                );
+
+                y += 25.0;
+            }
+
+            surface.draw_text(
+                Point::from_xy(20.0, y),
+                font.clone(),
+                18.0,
+                "Notes:",
+                false,
+                TextDirection::Auto
+            );
+
+            y += 25.0;
+
+            match project.notes {
+                Some(notes) => {
+                    let notes: Vec<&str> = notes.split("\n").filter(|text| !text.eq(&"")).collect();
+
+                    if notes.len() <= 20 {
+                        for line in notes {
+                            surface.draw_text(
+                                Point::from_xy(45.0, y),
+                                font.clone(),
+                                18.0,
+                                line,
+                                false,
+                                TextDirection::Auto
+                            );
+
+                            y += 25.0;
+                        }
+                    } else {
+                        surface.draw_text(
+                            Point::from_xy(45.0, y),
+                            font.clone(),
+                            18.0,
+                            "Notes too long",
+                            false,
+                            TextDirection::Auto
+                        );
+
+                        y += 25.0;
+                    }
+                }
+                None => {
+                    surface.draw_text(
+                        Point::from_xy(45.0, y),
+                        font.clone(),
+                        18.0,
+                        "Notes not provided",
+                        false,
+                        TextDirection::Auto
+                    );
+
+                    y += 25.0;
+                }
+            }
 
             surface.finish();
             page.finish();
