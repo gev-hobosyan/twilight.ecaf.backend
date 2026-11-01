@@ -36,7 +36,7 @@ use crate::vote::vote_routes;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    dotenv().expect(".env file not found");
+    // dotenv().expect(".env file not found");
 
     let state = Arc::new(AppState::new().await?);
 
