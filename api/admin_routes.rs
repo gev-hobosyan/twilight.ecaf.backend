@@ -37,7 +37,7 @@ impl TableDrawable for UserTableElement {
     }
 }
 
-fn check_api_key(headers: &HeaderMap, ) -> bool {
+pub fn check_api_key(headers: &HeaderMap, ) -> bool {
     let api_key = headers
         .get("x-api-key")
         .and_then(|value| value.to_str().ok());
@@ -65,7 +65,7 @@ async fn get_participants(
     if check_api_key(&headers) == false {
         return APIResponse::Error(
             StatusCode::BAD_REQUEST,
-            "API key not provided".into()
+            "API key not provided".into(),
         )
     }
 

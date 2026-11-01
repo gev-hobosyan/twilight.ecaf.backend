@@ -9,23 +9,20 @@ mod admin_routes;
 mod pdf_utils;
 mod user_routes;
 mod progress_routes;
+mod vote;
+mod vote_event;
 
 use std::env;
 use std::sync::Arc;
-use axum::body::Bytes;
 use axum::response::{IntoResponse};
 use axum::Router;
 use axum::http::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE};
 use axum::http::Method;
-use axum::routing::get;
 use dotenvy::dotenv;
 use sea_orm::{ActiveModelTrait, ColIdx, EntityTrait, Iden, ModelTrait};
 use vercel_runtime::Error;
 use crate::app_state::AppState;
-use genpdf::{fonts, Document, SimplePageDecorator, elements, Alignment, Element, style};
-use hyper::{header, HeaderMap, StatusCode};
 use serde::{Deserialize, Serialize};
-use teloxide::prelude::Requester;
 use teloxide::repls::CommandReplExt;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use crate::admin_routes::admin_routes;
@@ -35,6 +32,7 @@ use crate::project_routes::project_routes;
 use crate::support_routes::support_routes;
 use crate::team_routes::team_routes;
 use crate::user_routes::user_routes;
+use crate::vote::vote_routes;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -67,6 +65,7 @@ async fn main() -> Result<(), Error> {
         .merge(admin_routes())
         .merge(user_routes())
         .merge(progress_routes())
+        .merge(vote_routes())
         .layer(cors)
         .with_state(state);
 

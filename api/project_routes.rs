@@ -38,9 +38,11 @@ struct ProjectBodyOpt {
     story: Option<String>,
     #[serde(rename="useAI")]
     use_ai: Option<bool>,
+    github: Option<String>,
     tech_stack: Option<String>,
     notes: Option<String>,
-    owner: Option<Uuid>
+    owner: Option<Uuid>,
+    submitted: Option<bool>
 }
 
 impl ProjectBodyOpt {
@@ -73,6 +75,14 @@ impl ProjectBodyOpt {
             model.owner = Set(Some(owner));
         }
 
+        if let Some(submitted) = self.submitted {
+            model.submitted = Set(submitted);
+        }
+
+        if let Some(github) = self.github {
+            model.github = Set(Some(github));
+        }
+
         model
     }
 }
@@ -88,8 +98,10 @@ async fn create_project(
         story: Set(body.story),
         use_ai: Set(body.use_ai),
         tech_stack: Set(body.tech_stack),
+        github: Set(Some("".to_string())),
         notes: Set(body.notes),
         owner: Set(body.owner),
+        submitted: Default::default()
     };
 
     let result = project.insert(&state.db).await;
@@ -187,7 +199,7 @@ async fn update_project(
     Path(id): Path<i32>,
     Json(body): Json<ProjectBodyOpt>,
 ) -> APIResponse<Project> {
-    let result = crate::entity::public::project::Entity::find_by_id(id).one(&state.db).await;
+    let result = project::Entity::find_by_id(id).one(&state.db).await;
 
     match result {
         Ok(project) => {
