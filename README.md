@@ -1,53 +1,65 @@
----
-name: Rust Axum
-slug: rust-axum
-description: A Rust web application using the Axum framework with streaming capabilities on Vercel.
-framework:
-  - Other
-type:
-  - Starter
-css:
-  - None
-githubUrl: https://github.com/vercel/examples/tree/main/rust/axum
-demoUrl: https://rust-axum.vercel.dev
-deployUrl: https://vercel.com/new/clone?repository-url=https://github.com/vercel/examples/tree/main/rust/axum&project-name=rust-axum&repository-name=rust-axum
-publisher: Vercel
-relatedTemplates:
-  - rust-hello-world
-  - rust-websocket
-  - rust-wait-until
+<div align="center">
+	<img src="assets/logo.svg" alt="twilight" style="height: 120px; transform: translateX(-10px);"/>
+
+## **Twilight by Ecaf: Backend**
+
+</div>
+
+--- 
+
+## What is Twilight?
+
+**Twilight** is a 2-week hackathon I hosted in my school.
+
+This is the backend server used during the event by the participants to submit their projects and by organizers to track all the important information.
+
 ---
 
-# Rust Axum Web Framework
+## Tech Stack
 
-This example shows how to deploy a Rust web application using the Axum framework on Vercel with streaming capabilities.
+---
 
-## Project Structure
+| Layer | Technology |
+|----------|----------|
+| [Frontend](https://github.com/gev-hobosyan/twilight.ecaf) | Next.js, TypeScript, TailwindCSS |
+| Backend | Rust, Axum |
+| Database | [Neon Lakebase](https://neon.com/lakebase), [SeaORM](https://www.sea-ql.org/SeaORM/) |
+| PDF generation | [Krilla](https://github.com/LaurenzV/krilla) |
+| Telegram bot | [Teloxide](https://github.com/teloxide/teloxide) |
+---
 
-- `api/axum.rs` - Main Axum application
-  - `/` - Entrypoint with an interactive HTML interface for streaming
-  - `/stream` - Streaming endpoint
-  - `/users` - Post request endpoint
-- `Cargo.toml` - Rust dependencies and binary configuration
-- `vercel.json` - Vercel deployment configuration
+## Features
 
-## Development
+- **PDF generation**: A pdf containing all the projects and participants
+- **Telegram bot**: A ticket system implemented using a telegram bot
+- **Voting system**: Real time voting system 
 
-Clone the repository:
+---
+
+## Getting started
+
+---
+
+Make a copy of `.env.example` and name it `.env`. Replace the variables accordingly.
+
+- `CARGO_MANIFEST_DIR`: This is the root directory of your project.
+- `ADMIN_API_KEY`: The admin key used to access admin endpoints. Must be the same with the frontend. 
+- `BOT_TOKEN`: Telegram bot token.
+- `ADMIN_ID`: Admin's telegram ID.
+- `PORT`: The port used to run the server.
+
+The other variables are default neon variables you'll get while setting it up.
+
+#### Starting a development server
 
 ```bash
-git clone https://github.com/vercel/examples.git
-cd examples/rust/axum
+cargo run
 ```
 
-Install Rust if you haven't already:
+The server will be accessible on `http://localhost:PORT/`
+
+#### Building the binary
 
 ```bash
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-```
-
-Test locally:
-
-```bash
-vc dev
+cargo build --release && target/release/axum
 ```
